@@ -133,33 +133,59 @@
     );
 
     // WebSocket
-    try {
-      const ws = new WebSocket("wss://echo.websocket.events");
+    const websocketEndpoints = [
+      "wss://ws.postman-echo.com/raw",
+      "wss://echo.websocket.events"
+    ];
 
-      ws.onopen = () => {
-        addResult(
-          "WebSocket",
-          true,
-          "リアルタイム通信利用可能"
-        );
-
-        ws.close();
-      };
-
-      ws.onerror = () => {
+    function checkWebSocketEndpoint(index = 0, errors = []) {
+      if (index >= websocketEndpoints.length) {
         addResult(
           "WebSocket",
           false,
-          "WebSocket接続失敗"
+          `すべての接続先で失敗: ${errors.join(" / ")}`
         );
-      };
-    } catch (error) {
-      addResult(
-        "WebSocket",
-        false,
-        error.message
-      );
+        return;
+      }
+
+      const endpoint = websocketEndpoints[index];
+
+      try {
+        const ws = new WebSocket(endpoint);
+        const timeoutId = setTimeout(() => {
+          ws.close();
+          checkWebSocketEndpoint(
+            index + 1,
+            [...errors, `${endpoint}: timeout`]
+          );
+        }, 5000);
+
+        ws.onopen = () => {
+          clearTimeout(timeoutId);
+          addResult(
+            "WebSocket",
+            true,
+            `リアルタイム通信利用可能: <code>${endpoint}</code>`
+          );
+          ws.close();
+        };
+
+        ws.onerror = () => {
+          clearTimeout(timeoutId);
+          checkWebSocketEndpoint(
+            index + 1,
+            [...errors, `${endpoint}: error`]
+          );
+        };
+      } catch (error) {
+        checkWebSocketEndpoint(
+          index + 1,
+          [...errors, `${endpoint}: ${error.message}`]
+        );
+      }
     }
+
+    checkWebSocketEndpoint();
 
     // CDN Access
     fetch("https://cdn.jsdelivr.net/npm/react")
