@@ -2,13 +2,208 @@
 <html lang="ja">
 <head>
   <meta charset="utf-8">
-  <title>Environment Check</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>School Environment Check</title>
+
+  <style>
+    body {
+      font-family: system-ui, sans-serif;
+      max-width: 720px;
+      margin: 40px auto;
+      padding: 0 16px;
+      line-height: 1.7;
+      background: #f7f7f7;
+      color: #222;
+    }
+
+    h1 {
+      margin-bottom: 8px;
+    }
+
+    p.description {
+      margin-top: 0;
+      color: #555;
+    }
+
+    ul {
+      list-style: none;
+      padding: 0;
+    }
+
+    li {
+      background: white;
+      border-radius: 12px;
+      padding: 12px 16px;
+      margin-bottom: 12px;
+      border: 1px solid #ddd;
+    }
+
+    .ok {
+      border-left: 6px solid #2e7d32;
+    }
+
+    .ng {
+      border-left: 6px solid #c62828;
+    }
+
+    button {
+      padding: 10px 16px;
+      border: none;
+      border-radius: 10px;
+      background: #111;
+      color: white;
+      cursor: pointer;
+      margin-bottom: 20px;
+      font-size: 14px;
+    }
+
+    button:hover {
+      opacity: 0.9;
+    }
+
+    code {
+      background: #eee;
+      padding: 2px 6px;
+      border-radius: 6px;
+    }
+  </style>
 </head>
 <body>
-  <h1>Environment Check</h1>
+  <h1>学校環境チェック</h1>
+
+  <p class="description">
+    学校ネットワーク・Chromebook・校内端末で利用可能なWeb技術を確認するページ。
+  </p>
+
+  <button id="cameraButton">
+    カメラ確認を実行
+  </button>
+
+  <ul id="results"></ul>
 
   <script>
-    document.body.innerHTML += "<p>HTTPS: " + location.protocol + "</p>";
+    const results = document.getElementById("results");
+
+    function addResult(title, ok, detail = "") {
+      const li = document.createElement("li");
+
+      li.className = ok ? "ok" : "ng";
+
+      li.innerHTML = `
+        <strong>${ok ? "OK" : "NG"} - ${title}</strong>
+        <div>${detail}</div>
+      `;
+
+      results.appendChild(li);
+    }
+
+    // HTTPS
+    addResult(
+      "HTTPS",
+      location.protocol === "https:",
+      `現在のプロトコル: <code>${location.protocol}</code>`
+    );
+
+    // IndexedDB
+    addResult(
+      "IndexedDB",
+      "indexedDB" in window,
+      "ブラウザ内保存機能"
+    );
+
+    // Service Worker
+    addResult(
+      "Service Worker",
+      "serviceWorker" in navigator,
+      "PWA・オフライン機能用"
+    );
+
+    // LocalStorage
+    addResult(
+      "LocalStorage",
+      "localStorage" in window,
+      "ローカル保存機能"
+    );
+
+    // Notification API
+    addResult(
+      "Notification API",
+      "Notification" in window,
+      "通知機能"
+    );
+
+    // WebSocket
+    try {
+      const ws = new WebSocket("wss://echo.websocket.events");
+
+      ws.onopen = () => {
+        addResult(
+          "WebSocket",
+          true,
+          "リアルタイム通信利用可能"
+        );
+
+        ws.close();
+      };
+
+      ws.onerror = () => {
+        addResult(
+          "WebSocket",
+          false,
+          "WebSocket接続失敗"
+        );
+      };
+    } catch (error) {
+      addResult(
+        "WebSocket",
+        false,
+        error.message
+      );
+    }
+
+    // CDN Access
+    fetch("https://cdn.jsdelivr.net/npm/react")
+      .then(() => {
+        addResult(
+          "CDN Access",
+          true,
+          "外部CDNへアクセス可能"
+        );
+      })
+      .catch(() => {
+        addResult(
+          "CDN Access",
+          false,
+          "外部CDNへアクセス不可"
+        );
+      });
+
+    // Camera Check
+    document
+      .getElementById("cameraButton")
+      .addEventListener("click", async () => {
+        try {
+          const stream = await navigator.mediaDevices.getUserMedia({
+            video: true
+          });
+
+          addResult(
+            "Camera API",
+            true,
+            "カメラ利用可能"
+          );
+
+          stream
+            .getTracks()
+            .forEach(track => track.stop());
+        } catch (error) {
+          addResult(
+            "Camera API",
+            false,
+            error.message
+          );
+        }
+      });
   </script>
 </body>
 </html>
